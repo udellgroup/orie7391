@@ -1,6 +1,6 @@
 # **ORIE 7391: Faster: Algorithmic Ideas for Speeding Up Optimization**
 
-This Phd level course will explore foundational and modern ideas
+This PhD level course will explore foundational and modern ideas
 for speeding up optimization, with a particular focus on machine learning
 applications.
 We will survey ideas from (and for)
@@ -14,7 +14,7 @@ We will cover powerful techniques for speeding up computation,
 including ideas from (randomized) numerical linear algebra,
 stochastic and subsampling methods,
 automatic differentiation,
-lagrangian methods, 
+lagrangian methods,
 hyperparameter selection methods,
 and more.
 A detailed list of topics may be found [here](https://docs.google.com/spreadsheets/d/1dhp6D9WJpbvqckGtqw_cDgwzxyPobItjU80ZpkdjhWA/edit?usp=sharing).

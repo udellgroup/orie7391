@@ -11,7 +11,7 @@ zero-order optimization,
 automated machine learning,
 and deep learning.
 We will cover powerful techniques for speeding up computation,
-including ideas from (randomized) numerical linear algebra,
+including ideas from (randomized) low rank approximation and preconditioning,
 stochastic and subsampling methods,
 automatic differentiation,
 lagrangian methods,

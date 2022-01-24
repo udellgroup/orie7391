@@ -32,7 +32,7 @@ in addition to written reports.
 * **Where:** Upson Hall 202 or on [Zoom](https://cornell.zoom.us/j/95262693886?pwd=U25yRGFVTlVyUmpEWTRFMitvQzg2UT09)
 * [Quiz](https://goo.gl/forms/yOKLIbzP68M0qac52) (same link for all quizzes)
 * [CMT](https://cmt3.research.microsoft.com/ORIE7391Y2022) for paper reviews and peer reviews
-* [Slack](https://join.slack.com/t/orie7191/signup) (use your cornell.edu address)
+* [Slack](https://join.slack.com/t/slack-jyg4802/shared_invite/zt-1240yy0lw-NNBqgPLrTLCPjYmnf5AHxw)
 for general questions and comments.
 
 Office hours will be chosen via an in-class poll.

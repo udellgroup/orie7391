@@ -1,0 +1,415 @@
+\documentclass[presentation,xcolor={usenames,dvipsnames}]{beamer}
+
+% figures
+\newcommand{\home}{.}
+\newcommand{\figures}{\home/figures}
+\input formatting.tex
+\input defs.tex
+\usepackage{hyperref}
+\hypersetup{colorlinks=true}
+
+% \mode<handout>
+% %\mode<presentation>
+{
+\usetheme{default}
+}
+\setbeamertemplate{footline}[frame number]
+
+\bibliographystyle{alpha}
+
+\title{ORIE 7391: Faster: Algorithmic Ideas for Speeding Up Optimization\\[2ex]
+       Least squares}
+
+\date{\textcolor{blue}{\today}}
+\author{Professor Udell \\[1ex]
+Operations Research and Information Engineering \\
+Cornell}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}{solving a linear system}
+
+given \emph{design matrix} $X \in \reals^{m\times n}$, \emph{righthand side} (rhs) $y \in \reals^m$. find $w$ so that
+\[
+Xw = y.
+\]
+\pause
+how?
+\bit
+\item factor and solve
+\bit
+\item QR
+\item singular value decomposition (SVD)
+\item Cholesky (for symmetric $X$)
+\eit
+\item iterative methods
+\bit
+\item conjugate gradient (CG)
+\item iterative refinement
+\eit
+\eit
+we will talk about QR and CG
+
+\end{frame}
+
+\begin{frame}{considerations in choosing a method}
+
+  \bit
+  \item one problem, or many righthand sides $y$ with the same design matrix $X$?
+  \item sparse or dense $X$?
+  \item symmetric $X$ or rectangular problem?
+  \eit
+
+\end{frame}
+
+\begin{frame}{optimality condition for least squares is a linear system}
+
+given $X \in \reals^{m\times n}$, $y \in \reals^m$. find $w$ to solve
+\[
+\mbox{minimize} \qquad \|Xw - y\|^2.
+\]
+to solve, take gradient, set to 0. solution $x$ satisfies \emph{normal equations}
+\[
+X^T X w = X^T y.
+\]
+a linear system! (with symmetric positive semidefinite design matrix $X^T X$.)
+
+\end{frame}
+
+\section{QR}
+
+\begin{frame}[fragile]{The fundamental theorem of numerical analysis}
+
+\begin{theorem}
+  Never form the inverse (or pseudoinverse) of a matrix explicitly.
+\end{theorem}
+(Numerically unstable.)
+\vfill
+Corollary: never type \verb|inv(X'*X)| or \verb|pinv(X'*X)| to solve the normal equations.
+\vfill \pause
+Instead: compute the inverse using easier matrices to invert, like
+\bit
+\item Orthogonal matrices $Q$:
+\[
+a = Qb \iff Q^T a = b
+\]
+\item Triangular matrices $R$: \\
+if $a = Rb$,
+can find $b$ given $R$ and $a$ by solving sequence of simple, stable equations.
+\eit
+
+\end{frame}
+
+\begin{frame}[fragile]{The QR factorization}
+
+every matrix $X$ can be written using \emph{QR decomposition} as $X = QR$
+\bit
+\item $Q \in \reals^{n \times d}$ has orthogonal columns: $Q^\top  Q = I_d$
+\item $R \in \reals^{d \times d}$ is upper triangular: $R_{ij} = 0$ for $i>j$
+\item diagonal of $R \in \reals^{d \times d}$ is positive: $R_{ii} > 0$ for $i=1,\ldots,d$
+\item this factorization always exists and is unique \\
+(proof by Gram-Schmidt construction)
+\eit
+can compute $QR$ factorization of $X$ in $2nd^2$ flops
+\vfill
+\pause use \verb|scipy.linalg.qr|:
+\begin{lstlisting}
+  Q,R = qr(X)
+\end{lstlisting}
+\textbf{advantage of QR:} it's easy to invert R! %also, it's always invertible when $X$ is full rank
+\end{frame}
+
+\begin{frame}[fragile]{QR for least squares}
+
+use QR to solve least squares: if $X = QR$,
+\beas
+X^\top  X w &=& X^\top  y \\
+(QR)^\top QRw &=& (QR)^\top y \\
+R^\top Q^\top QRw &=&  R^\top Q^\top y \\
+R^\top Rw &=& R^\top Q^\top y \\
+Rw &=& Q^\top y \\
+w &=& R^{-1} Q^\top y
+\eeas
+
+\end{frame}
+
+\begin{frame}[fragile]{Computational considerations}
+
+\emph{never} form the inverse explicitly: numerically unstable!
+\vfill
+instead, use $QR$ factorization:
+\bit
+\item compute $QR$ factorization of $X$ \hfill ($2nd^2$ flops)
+\item to compute $w = R^{-1} Q^\top  y$ % = X^\dagger y
+\bit
+\item form $b = Q^\top  y$ \hfill ($2nd$ flops)
+\item compute $w = R^{-1} b$ by back-substitution \hfill ($d^2$ flops)
+\eit
+\eit
+\vfill
+\pause in julia (or matlab), the \emph{backslash operator} solves least-squares efficiently (usually, using QR)
+\begin{lstlisting}
+  w = X \ y
+\end{lstlisting}
+in python, use \verb|numpy.lstsq|
+\end{frame}
+
+\begin{frame}{Demo: QR}
+
+\url{https://github.com/ORIE4741/demos/QR.ipynb}
+
+\end{frame}
+
+\begin{frame}{Sparse QR}
+
+complexity of QR depends on the sparsity of Q and R:
+\bit
+\item compute $QR$ factorization of $X$ \hfill (?? flops)
+\item to compute $w = R^{-1} Q^\top  y$ % = X^\dagger y
+\bit
+\item form $b = Q^\top  y$ \hfill ($\nnz(Q)$ flops)
+\item compute $w = R^{-1} b$ by back-substitution \hfill ($\nnz(R)$ flops)
+\eit
+\eit
+\end{frame}
+
+\begin{frame}{Q-less QR}
+during QR, can compute $Q^\top y$ essentially for free! % forming QR factorization,
+\bit
+\item compute QR of $\begin{bmatrix} X \quad y \end{bmatrix}$.
+\eit
+\pause \vfill
+or compute it afterwards without forming $Q$:
+\beas
+X^T b &=& (QR)^T b = R^T Q^T b \\
+R^{-1} X^T b &=& Q^T b
+\eeas
+
+\end{frame}
+
+\begin{frame}{Cholesky and QR}
+
+consider \emph{Gram matrix} $G = X^T X \succeq 0$. if $X = QR$,
+\[
+G = R^T Q^T Q R = R^T R
+\]
+this construction gives \emph{Cholesky factorization} % of a psd matrix $G$
+\bit
+\item factors spd matrix into triangular matrices
+\item Cholesky factors of $X^T X$ have same structure as $R$
+\eit
+
+\end{frame}
+
+\begin{frame}{Sparse QR: exercise}
+
+\bit
+\item can you guess the sparsity of $R$ given sparsity of $X$?
+\item can you change sparity of $R$ by permuting columns of $X$?
+\eit
+\pause use `colamd` in Matlab, equivalents in Python and julia
+
+\end{frame}
+
+\begin{frame}{Chordal fill-in}
+
+to analyze fill-in
+\bit
+\item consider spd matrix, for simplicity
+\item interpret matrix as directed graph
+\item form clique tree
+\item identify fill-in
+\eit
+\cfh[.5]{chordal-graph}
+
+\source{VA15, https://www.seas.ucla.edu/~vandenbe/publications/chordalsdp.pdf}
+
+\end{frame}
+
+\section{Conjugate gradient}
+
+\begin{frame}{Conjugate gradients}
+
+symmetric positive definite system of equations
+\[
+Ax - b, \qquad A\in\reals^{n\times n}, \qquad A = A^T \succeq 0
+\]
+\pause
+why use conjugate gradients?
+\bit
+\item uses only matrix-vector multiplies with $A$
+\bit \item useful for structured (from PDE or graph) or sparse matrices, easy to parallelize, \ldots \eit
+\item most useful for problems with $n>10^5$ or more
+\item converges exactly in $n$ iterations
+\item converges approximately much faster
+\item quick-and-dirty solve is appropriate \emph{inside} inner loop of optimization algo
+\eit
+\pause
+other variants for indefinite (MINRES) or nonsymmetric matrices (GMRES)
+
+\source{presentation of CG inspired by \url{https://stanford.edu/class/ee364b/lectures/conj_grad_slides.pdf}}
+\end{frame}
+
+\begin{frame}{Iterative methods for least squares}
+
+define
+\bit
+\item objective $f(x) = \frac 1 2 \|Ax - b\|^2$
+\item condition number $\kappa(A) = \sigma_n (A) / \sigma_1(A)$
+\item bound $R \geq \|x_\star\|$ on norm of solution $x_\star$
+\item goal: find apx solution within accuracy $f(x) - f(x_\star) \leq \epsilon$
+\eit
+\pause
+how many iterations (matvecs) required?
+  \bit
+  \pitem conjugate gradient
+  \bit \item $O\left(\sqrt{\kappa}\log(\frac{1}{\epsilon})\right)$ \eit
+  \pitem gradient descent (GD)
+  \bit \item $O\left(\kappa \log(1/\epsilon)\right)$ \eit
+  \pitem accelerated gradient descent
+  \bit \item $O\left(\sqrt{\kappa}\log(\frac{R^2}{\epsilon})\right)$ more generalizable, but more parameters to tune \eit
+  \eit
+
+\source{\cite{karimi2016unified,bubeck2014convex}}
+
+\end{frame}
+
+\begin{frame}{Residual}
+
+define \emph{residual} $r = b - Ax$ at putative solution $x$
+\bit
+\item $r = -\nabla f(x) = A(x_\star) - x$
+\eit
+\pause \vfill
+measures of error:
+\bit
+\item objective function $f(x) - f(x_\star)$
+\item norm of residual $\| r \|$
+\item norm of gradient $\| \nabla f(x) \|$
+\item in terms of $r$, can compute error in objective
+\begin{align}
+f(x)-f(x_\star) &= \|x - x_\star\|_A \\
+&= \frac 1 2 (x - x_\star)^T A (x - x_\star) \\
+&= \frac 1 2 (r)^T A^{-1} (r) \\
+&= \|r\|_{A^{-1}}
+\end{align}
+\eit
+
+\end{frame}
+
+\begin{frame}{Krylov subspace}
+
+the Krylov subspace of dimension $k$ is
+\[
+\mathcal K_k = \Span\{b, Ab, \ldots, A^{k-1} b\} = \Span\{p_k(A)b \mod \mathop{\bf degree}(p) < k\}
+\]
+\pause \vfill
+the iterates of the \emph{Krylov sequence} $x^{(1)}, x^{(2)}, \ldots,$ minimize objective over successive Krylov subspaces
+\[
+x^{(k)} = \argmin_{x \in \mathcal K_k} f(x) = \argmin_{x \in \mathcal K_k} \|Ax - b\| = \argmin_{x \in \mathcal K_k} \|x - x_\star\|_A
+\]
+the CG algorithm generates the Krylov sequence
+
+\end{frame}
+
+\begin{frame}{Properties of Krylov sequence}
+
+\bit
+\item $f(x^{(k+1)}) \leq f(x^{(k)})$ (but $\|r\|$ can increase)
+\item $x^{(n)} = x_\star$
+\item $x^{(k)} = p_k(A)b$, where $p_k$ is a polynomial with degree $< k$
+\item less obvious: there is a two-term recurrence
+\[
+x^{(k+1)} = x^{(k)} + \alpha_k r^{(k)} + \beta_k(x^{(k)} - x^{(k-1)})
+\]
+\bit
+\item $\alpha_k$ and $\beta_k$ are determined by the CG algorithm
+\item looks like accelerated gradient descent update
+\item can derive recurrence from optimality conditions: \\
+each new iterate $x^{(k+1)}$ must have gradient (residual) orthogonal to $\mathcal K_k$
+% so you can find it in span of previous iterates + $A^{k-1}b$
+\eit
+\eit
+\pause
+exercise: derive CG update from Krylov optimality condition
+\end{frame}
+
+\begin{frame}{CG converges in $\rank(A)$ iterations}
+
+write (don't compute!) SVD of $A = V \Lambda V^T$ with
+\bit
+\item $r = \rank(A)$
+\item $\Lambda \in \reals^r \times r$ diagonal
+\item $V \in \reals^{n \times r}$: orthonormal: $V^T V = I_r$
+\eit
+\pause
+characteristic polynomial of $\Lambda$:
+\[
+\xi(s) = \det(sI_r - \Lambda) = (s-\lambda_1)\cdots(s-\lambda_r) = s^r + \alpha s^{r-1} + \cdots + \alpha_r
+\]
+Cayley-Hamilton theorem
+\beas
+\xi(\Lambda) = 0 &=& \Lambda^r + \alpha_1 \Lambda^{r-1} + \cdots + \alpha_r I_r \\
+\Lambda^{-1} &=& -(1/\alpha_r)(\Lambda^{r-1} + \alpha_1 \Lambda^{r-2} + \cdots + \alpha_{r-1} I_r)
+\eeas
+\pause
+write $A^{-1} = V \Lambda^{-1} V^T$ in terms of this decomposition:
+\beas
+A^{-1} = V \Lambda^{-1} V^T &=&= -(1/\alpha_r)(V\Lambda^{r-1}V^T + \alpha_1 V\Lambda^{r-2}V^T + \cdots + \alpha_{r-1} VV^T) \\
+&=& -(1/\alpha_r)(A^{r-1} + \alpha_1 A^{r-2} + \cdots + \alpha_{r-1} I)
+\eeas
+in particular, $x_\star = A^{-1} b \in \mathcal K_r$
+\end{frame}
+
+\section{Iterative refinement}
+
+\begin{frame}{Iterative refinement}
+
+want to solve $Ax = b$.
+\vfill
+given approximate solution $A x^{(0)} \approx b$, for $k=1,\ldots$,
+\bit
+\item compute residual $r^{(k)} = b - A x^{(k)}$
+\item use any method to solve $A \delta^{(k)} = r^{(k)}$
+\item $x^{(k+1)} = x^{(k)} + \delta^{(k)}$
+\eit
+
+\end{frame}
+
+\bibliography{madeleine_refs}
+
+\end{document}
+
+every matrix has one
+
+solves least squares and/or linear system
+
+dense:
+time to compute
+time to solve
+
+how to compute: Gaussian elimination
+
+demo
+
+add:
+* an ill-conditioned matrix
+* what's wrong with pinv?
+* does QR do better?
+
+sparse:
+example with different performance depending on permutation
+time to compute
+time to solve
+what permutation is best?
+picture from Lieven survey
+
+CG
+
+when do you have many rhs for same design matrix?
+* influence functions
+* approximate CV

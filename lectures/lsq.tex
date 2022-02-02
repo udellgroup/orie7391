@@ -232,6 +232,25 @@ to analyze fill-in
 
 \section{Conjugate gradient}
 
+\begin{frame}{Quiz}
+
+Given the eigendecomposition $A = V \Lambda V^T$ of a spd matrix $A \in \reals^{n \times n}$,
+the conjugate gradient method generates the same sequence of objective values on
+(design matrix, righthand side) $(A, b)$ as on $(\Lambda, Vb)$.
+\ben[A.]
+\item true
+\item false
+\een
+\vfill
+Given a concrete matrix $A \in \reals^{n \times n}$ (\eg, as an array of numbers),
+stochastic trace estimation is a useful way to approximate $\tr(A)$
+\ben[A.]
+\item true
+\item false
+\een
+
+\end{frame}
+
 \begin{frame}{Conjugate gradients}
 
 symmetric positive definite system of equations
@@ -258,7 +277,8 @@ other variants for indefinite (MINRES) or nonsymmetric matrices (GMRES)
 
 define
 \bit
-\item objective $f(x) = \frac 1 2 \|Ax - b\|^2$
+\item (convex) objective $f(x) = (1/2) x^T Ax - x^T b$
+\item gradient $\nabla f(x) = Ax - b$
 \item condition number $\kappa(A) = \sigma_n (A) / \sigma_1(A)$
 \item bound $R \geq \|x_\star\|$ on norm of solution $x_\star$
 \item goal: find apx solution within accuracy $f(x) - f(x_\star) \leq \epsilon$
@@ -282,7 +302,7 @@ how many iterations (matvecs) required?
 
 define \emph{residual} $r = b - Ax$ at putative solution $x$
 \bit
-\item $r = -\nabla f(x) = A(x_\star) - x$
+\item $r = -\nabla f(x) = A(x_\star-x)$
 \eit
 \pause \vfill
 measures of error:
@@ -291,12 +311,12 @@ measures of error:
 \item norm of residual $\| r \|$
 \item norm of gradient $\| \nabla f(x) \|$
 \item in terms of $r$, can compute error in objective
-\begin{align}
+\begin{align*}
 f(x)-f(x_\star) &= \|x - x_\star\|_A \\
 &= \frac 1 2 (x - x_\star)^T A (x - x_\star) \\
 &= \frac 1 2 (r)^T A^{-1} (r) \\
 &= \|r\|_{A^{-1}}
-\end{align}
+\end{align*}
 \eit
 
 \end{frame}
@@ -305,7 +325,7 @@ f(x)-f(x_\star) &= \|x - x_\star\|_A \\
 
 the Krylov subspace of dimension $k$ is
 \[
-\mathcal K_k = \Span\{b, Ab, \ldots, A^{k-1} b\} = \Span\{p_k(A)b \mod \mathop{\bf degree}(p) < k\}
+\mathcal K_k = \Span\{b, Ab, \ldots, A^{k-1} b\} = \Span\{p_k(A)b \mid \mathop{degree}(p) < k\}
 \]
 \pause \vfill
 the iterates of the \emph{Krylov sequence} $x^{(1)}, x^{(2)}, \ldots,$ minimize objective over successive Krylov subspaces
@@ -327,15 +347,20 @@ the CG algorithm generates the Krylov sequence
 x^{(k+1)} = x^{(k)} + \alpha_k r^{(k)} + \beta_k(x^{(k)} - x^{(k-1)})
 \]
 \bit
-\item $\alpha_k$ and $\beta_k$ are determined by the CG algorithm
-\item looks like accelerated gradient descent update
-\item can derive recurrence from optimality conditions: \\
+\pitem $\alpha_k$ and $\beta_k$ are determined by the CG algorithm
+\pitem looks like accelerated gradient descent update
+\pitem can derive recurrence from optimality conditions: \\
 each new iterate $x^{(k+1)}$ must have gradient (residual) orthogonal to $\mathcal K_k$
 % so you can find it in span of previous iterates + $A^{k-1}b$
 \eit
 \eit
 \pause
 exercise: derive CG update from Krylov optimality condition
+\end{frame}
+
+\begin{frame}{Coordinate descent does \emph{not} solve in $n$ iterations}
+  \cfh[.8]{cg-vs-cd}
+  \source{NW04}
 \end{frame}
 
 \begin{frame}{CG converges in $\rank(A)$ iterations}

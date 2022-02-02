@@ -12,6 +12,15 @@
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{[todo: #1]}}}
 \newcommand{\source}[1]{\footnotesize\textcolor{gray}{source: #1}}
 
+% algorithms
+\usepackage[noend]{algpseudocode}
+\usepackage{algorithm,algorithmicx}
+\algrenewcommand\alglinenumber[1]{\sf\tiny\color{medblue}{#1}\quad}
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+\renewcommand{\thealgorithm}{} % don't number algorithms
+\newcommand{\comment}[1]{\hfill $\rhd$ {\small(#1)}}
+
 % questions and answers
 \newcommand{\question}[1]{\textcolor{blue}{\textbf{Q:}} #1\\}
 \newcommand{\pquestion}[1]{\pause \textcolor{blue}{\textbf{Q:}} #1\\}
@@ -68,6 +77,7 @@
 % probability stuff
 % \newcommand{\Expect}{\mathop{\mathbb E{}}}
 \newcommand{\Expect}{\mathbb E{}}
+\newcommand{\expect}{\mathbb E{}}
 \newcommand{\Prob}{\mathop{\mathbb P}}
 % \newcommand{\Expect}{\mathop{\bf E{}}}
 % \newcommand{\Prob}{\mathop{\bf Prob}}
@@ -81,7 +91,7 @@
 \newcommand{\epi}{\mathop{\bf epi}}
 %\newcommand{\hypo}{\mathop{\bf hypo}}
 \newcommand{\bias}{\bf bias}
-\newcommand{\var}{\bf var}
+\newcommand{\var}{\textup{Var}}
 % \newcommand{\bias}{\mathop{\bf bias}}
 % \newcommand{\var}{\mathop{\bf var}}
 \newcommand{\vol}{\mathop{\bf vol}}
@@ -207,3 +217,22 @@
 \setlength{\parsep}{\parskip}%
 }%
 \item[]}{\end{list}}
+
+% format Tropp style like Boyd style
+\newcommand{\vct}[1]{#1}
+\newcommand{\mtx}[1]{#1}
+\newcommand{\norm}[1]{\|#1\|}
+\newcommand{\fnorm}[1]{\|#1\|_F}
+\newcommand{\R}{\reals}
+\newcommand{\econst}{e}
+
+% colors
+\definecolor{dkred}{rgb}{.5,0,0}
+\definecolor{dark-gray}{gray}{0.3}
+\definecolor{dkgray}{rgb}{.4,.4,.4}
+\definecolor{gray}{rgb}{.4,.4,.4}
+\definecolor{grey}{rgb}{.4,.4,.4}
+\definecolor{dkblue}{rgb}{0,0,.5}
+\definecolor{medblue}{rgb}{0,0,.75}
+\definecolor{rust}{rgb}{0.5,0.1,0.1}
+\newcommand{\mathred}[1]{\textcolor{red}{#1}}

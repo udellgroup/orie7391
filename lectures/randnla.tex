@@ -1,0 +1,401 @@
+\documentclass[presentation,xcolor={usenames,dvipsnames}]{beamer}
+
+% figures
+\newcommand{\home}{.}
+\newcommand{\figures}{\home/figures}
+\input formatting.tex
+\input defs.tex
+\usepackage{hyperref}
+\hypersetup{colorlinks=true}
+
+% \mode<handout>
+% %\mode<presentation>
+{
+\usetheme{default}
+}
+\setbeamertemplate{footline}[frame number]
+
+\bibliographystyle{alpha}
+
+\title{ORIE 7391: Faster: Algorithmic Ideas for Speeding Up Optimization\\[2ex]
+       Randomized Numerical Linear Algebra}
+
+\date{\textcolor{blue}{\today}}
+\author{Professor Udell \\[1ex]
+Operations Research and Information Engineering \\
+Cornell}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\section{Why randomize?}
+
+\begin{frame}{Why randomize?}
+
+trade time for accuracy
+when you're solving a subproblem
+
+\end{frame}
+
+\begin{frame}{Basic building block: random matvec}
+
+given
+\bit
+\item operator $A: \reals^n \to \reals^m$
+\item random test vector $\omega \in \reals^n$
+\eit
+form
+\[
+A\omega
+\]
+\pause
+what random vectors?
+\bit
+\item Gaussian $\omega \sim \mathcal N(0, I_n)$
+\item Rademacher $\omega \sim \mathcal U\{\pm 1\}^n$
+\item sparse
+\item fast Johnson-Lindenstrauss transform
+\item subsampled randomized fourier transform
+\item \ldots
+\eit
+
+\end{frame}
+
+\section{Trace estimation}
+
+\begin{frame}{Trace computation}
+
+compute $\tr(A)$ without randomization:
+\bit
+\pitem $\sum_{i=1}^n A_{ii}$ requires access to individual entries of $A$, $O(n)$ flops
+\pitem $\sum_{i=1}^n e_i^T A e_i$ can be computed with $n$ matvecs + $O(n)$ flops
+\eit
+\pause can we do it with fewer matvecs?
+
+\end{frame}
+
+\begin{frame}{Trace estimation}
+
+suppose $\omega \in \reals^n$ is isotropic: $\expect \omega \omega^T = I$. then
+\[
+X = \omega^T A \omega \quad \mbox{satisfies} \quad \expect X = \tr(A)
+\]
+\pause
+\textbf{proof:}
+\beas
+\omega^T A \omega &=& \tr(\omega^T A \omega) = \tr(A \omega \omega^T ) \\
+\expect \omega^T A \omega &=& \expect \tr(A \omega \omega^T ) = \tr( A I) = \tr(A)
+\eeas
+\end{frame}
+
+\begin{frame}{Improve variance by averaging}
+
+estimate trace by averaging over many iid copies:
+\[
+\bar X_k = \frac 1 k \sum_{i=1^k} X_i \quad \mbox{where} \quad X_i \sim X \mbox{ are iid}
+\]
+cost: $k$ random $n$-vectors + $k$ matvecs + $O(kn)$ arithmetic
+\pause
+\[
+\expect[\bar X_k] = \tr(A) \qquad \var[\bar X_k] = \frac 1 k \var[X]
+\]
+
+\end{frame}
+
+\section{Maximum eigenvectors}
+
+\begin{frame}{Approximate eigenvectors}
+
+\begin{definition}
+For a symmetric matrix $M \in \sym_+^n$, we say
+a unit vector $v$ is an \emph{$\eps$-approximate maximum eigenvector} if
+\[
+v^* M v	\geq (1-\eps) \lambdamax(M).
+\]
+\end{definition}
+
+\pause \vfill
+how to find approximate maximum eigenvector (efficiently)?
+\bit
+\item (-) Krylov methods (\eg, ARPACK \texttt{eigs})
+\bit \item unstable, hard to control precision \eit
+\item (+) power method
+\bit \item converges in $\mathcal O(\eps^{-1})$ iterations, needs $\mathcal O(n)$ storage \eit
+\item (+) randomized Lanczos method
+\bit \item converges in $q = \mathcal O(\eps^{-1/2})$ iterations, needs $\mathcal O(nq)$ storage
+\item (or can use $\mathcal O(n)$ storage by running it twice) \eit
+\eit
+
+\end{frame}
+
+\begin{frame}{Approximate eigenvectors: power method}
+
+	\begin{algorithm}[H] %[htb]
+	  \caption{\textsf{ApproxMaxEvec} via randomized power method}
+	  \begin{algorithmic}[1]
+
+		\Require{$\mtx{M} \in \sym_n$, and maxiters $q$}
+	  \Ensure{Approximate minimum eigenpair $(\xi, \vct{v}) \in \R \times \R^n$ of $\mtx{M}$}
+
+	\vspace{0.5pc}
+
+		\Function{ApproxMaxEvec}{$\mtx{M}$; $q$}
+
+	  	\State	$\omega \gets \texttt{randn}(n)$ %2 \texttt{normest}(\mtx{M}, 0.1)$
+			\State	$v \gets \omega / \norm{\omega}$
+		\For{$i \gets 1, 2, 3, \dots, q$}
+	  		\State	$v \gets A v$
+				\State $v \gets v / \norm{v}$
+		\EndFor
+		\State	\Return{$(\vct{v}^*(\mtx{M} \vct{v}), v)$}
+		\EndFunction
+
+	\end{algorithmic}
+	\end{algorithm}
+
+\end{frame}
+
+\begin{frame}{Power method: guarantees}
+
+\begin{fact}[Randomized power method (\cite{KW92:Estimating-Largest})]
+Let $M$ be a real psd matrix.
+After $q \geq 2$ iterations, the randomized power method computes an
+$\epsilon$-approximate maximum eigenvector $v$ with
+\[
+\expect \epsilon \geq 0.871 \frac{\log n}{q-1}.
+\]
+\end{fact}
+
+\vfill
+\bit
+\item arithmetic cost is $\mathcal{O}( q )$ matrix--vector multiplies with $\mtx{M}$ and $\mathcal{O}(q n)$ extra operations
+\item working storage is about $2n$ numbers
+\eit
+
+\end{frame}
+
+\section{Minimum eigenvectors}
+
+\begin{frame}{Approximate eigenvectors}
+
+\begin{definition}
+For a symmetric matrix $M \in \sym_+^n$, we say
+a unit vector $v$ is an \emph{$\eps$-approximate minimum eigenvector} if
+\[
+v^* M v	\leq \lambdamin(M) + \eps \norm{M}.
+\]
+\end{definition}
+
+\pause \vfill
+how to find approximate minimum eigenvector (efficiently)?
+\bit
+\item (-) Krylov methods (\eg, ARPACK \texttt{eigs})
+\bit \item unstable, hard to control precision \eit
+\item (+) shifted power method
+\bit \item converges in $\mathcal O(\eps^{-1})$ iterations, needs $\mathcal O(n)$ storage \eit
+\item (+) randomized Lanczos method
+\bit \item converges in $q = \mathcal O(\eps^{-1/2})$ iterations, needs $\mathcal O(nq)$ storage
+\item (or can use $\mathcal O(n)$ storage by running it twice) \eit
+\eit
+
+\end{frame}
+
+\begin{frame}{Approximate eigenvectors: shifted power method}
+
+\bit
+\item use power iteration to find max eigenvalue
+\item min eigenvalue of $M$ is max eigenvalue of $\norm{M}I - M$
+\eit
+
+	\begin{algorithm}[H] %[htb]
+	  \caption{\textsf{ApproxMinEvec} via randomized shifted power method}
+	  \begin{algorithmic}[1]
+
+		\Require{$\mtx{M} \in \sym_n$, and maxiters $q$}
+	  \Ensure{Approximate minimum eigenpair $(\xi, \vct{v}) \in \R \times \R^n$ of $\mtx{M}$}
+
+	\vspace{0.5pc}
+
+		\Function{ApproxMinEvec}{$\mtx{M}$; $q$}
+
+	  	\State	$\sigma \gets \norm{\mtx{M}}$ %2 \texttt{normest}(\mtx{M}, 0.1)$
+			% \Comment{Use \texttt{normest} to estimate shift}
+			\State	$\vct{v} \gets \texttt{randn}(n, 1) / \sqrt{n}$
+			% \Comment{Random initial vector}
+		\For{$i \gets 1, 2, 3, \dots, q$}
+	  		\State	$\vct{v} \gets \sigma \vct{v} - \mtx{M} \vct{v}$
+				% \Comment{Power method for $\sigma \Id - \mtx{M}$}
+				\State	$\vct{v} \gets \vct{v} / \norm{\vct{v}}$
+				% \Comment{Approx.~minimum eigenvector of $\mtx{M}$}
+		\EndFor
+		\State	\Return{$(\vct{v}^*(\mtx{M} \vct{v}), v	)$}
+			% \Comment{Approx.~minimum eigenvalue of $\mtx{M}$}
+		\EndFunction
+
+	\end{algorithmic}
+	\end{algorithm}
+
+\end{frame}
+
+\begin{frame}{Power method: guarantees}
+
+\begin{fact}[Randomized shifted power method (\cite{KW92:Estimating-Largest})]
+Let $\mtx{M} \in \sym_n$. For $\eps \in (0,1]$ and $\delta \in (0, 1]$,
+the shifted power method
+computes a unit vector $\vct{u} \in \R^n$ that satisfies
+$$
+\vct{u}^* \mtx{M} \vct{u} \leq \lambda_{\min}(\mtx{M}) + \eps \norm{\mtx{M}}
+\quad\text{w/prob $\geq 1 - \delta$}
+$$
+after $q \geq \tfrac{1}{2} + \eps^{-1} \log(n/\delta^2)$ iterations.%
+\footnote{All logarithms are base-$\econst$.}
+\end{fact}
+
+\vfill
+\bit
+\item arithmetic cost is $\mathcal{O}( q )$ matrix--vector multiplies with $\mtx{M}$ and $\mathcal{O}(q n)$ extra operations
+\item working storage is about $2n$ numbers
+\eit
+
+\end{frame}
+
+\section{Rangefinder}
+
+\begin{frame}{Randomized rangefinder}
+
+given matrix $A \in \reals^{m \times n}$, subspace dimension $\ell$
+\bit
+\item draw random test matrix $\Omega \in \reals^{n \times \ell}$
+\item compute sketch $Y = A \Omega$ \comment{$\ell$ matvecs}
+\item form QR decomposition $QR = Y$ \comment{$O(m\ell^2)$ flops}
+\eit
+\pause \vfill
+then
+\bit
+\item $Q \in \range(A)$
+\item if $\ell > \rank(A)$, then $\Span(Q) = \range(A)$ with probability 1
+\item for quantitative error bounds, see ch 11 PGMJAT20
+\eit
+
+\end{frame}
+
+\section{SVD}
+
+\begin{frame}{How to catch a low rank matrix}
+
+\begin{center}
+if $\hat{\mtx{X}}$ has the same rank as $\mtx{X}^\star$, \\
+and $\hat{\mtx{X}}$ acts like $\mtx{X}^\star$ (on its range and co-range), \\
+then $\hat{\mtx{X}}$ is $\mtx{X}^\star$
+\end{center}
+
+% If it looks like a duck, swims like a duck, and quacks like a duck, then it probably is a duck.
+
+use single-pass randomized sketch \cite{tropp2019streaming,tropp2017fixed,tropp2017practical}
+\bit
+\item learn how the matrix acts on a random subspace
+\item reconstruct a low rank matrix that acts like $\mtx{X}^\star$
+\item storage cost for sketch and arithmetic cost of update are
+$\mathcal{O}(r(m+n))$
+\item reconstruction is $\mathcal{O}(r^2(m+n))$
+\eit
+
+\end{frame}
+
+\begin{frame}{Single-pass randomized sketch}
+\bit
+\item
+Draw and fix two independent standard normal matrices
+\[
+\mtx{\Omega} \in \R^{n \times k}
+\quad\text{and}\quad
+\mtx{\Psi} \in \R^{\ell \times m}
+\]
+%with $k = 2r + 1$, $\ell = 4r + 3$.
+with $k = 2r + 1$, $\ell = 4r + 2$.
+\pause \item The sketch consists of two matrices %$\mtx{Y}$ and $\mtx{W}$
+that capture the range and co-range of $\mtx{X}$:
+\[
+\mtx{Y} = \mtx{X}\mtx{\Omega} \in \R^{n \times k}
+\quad\text{and}\quad
+\mtx{W} = \mtx{\Psi} \mtx{X}  \in \R^{\ell \times m}
+\]
+\pause \item Rank-1 updates to $\mtx{X}$ can be performed on sketch:
+\beas
+&\mtx{X}' = \beta_1 \mtx{X} + \beta_2 \vct{u} \vct{v}^*& \\
+&\Downarrow& \\
+&\mtx{Y}' = \beta_1 \mtx{Y} + \beta_2 \vct{u} \vct{v}^* \mtx{\Omega}
+\quad\text{and}\quad
+\mtx{W}' = \beta_1 \mtx{W} + \beta_2 \mtx{\Psi} \vct{u} \vct{v}^*&
+\eeas
+\pause \item Both the storage cost for the sketch and the arithmetic cost of an update are
+$\mathcal{O}(r(m+n))$.
+\eit
+
+\end{frame}
+%
+\begin{frame}{Recovery from sketch}
+
+To recover rank-$r$ approximation $\hat{\mtx{X}}$ from the sketch, compute
+\ben
+\item $\mtx{Y} = \mtx{QR}$ \comment{tall-skinny QR}
+\item $\mtx{B} = (\mtx{\Psi} \mtx{Q})^{\dagger} \mtx{W}$ \comment{small QR + backsub}
+\item $\hat{\mtx{X}} = \mtx{Q} [\mtx{B}]_r$ \comment{tall-skinny SVD}
+\een
+% The matrix $\mtx{Q}$ in the orthogonal factorization %of $\mtx{Y}$
+% has orthonormal columns that span the range of $\mtx{Y}$.
+% The extra storage costs of the reconstruction are negligible;
+% its arithmetic cost is $\mathcal{O}(r^2 (m + n))$.
+\pause
+\begin{theorem}[Reconstruction \cite{yurtsever2017sketchy}]
+% \protect{\mycite{Thm.~5.1, Tropp Yurtsever U Cevher 2016}}]
+Fix a target rank $r$.  Let $\mtx{X}$ be a matrix, and let $(\mtx{Y}, \mtx{W})$
+be a sketch of $\mtx{X}$. % of the form~\eqref{eqn:test-matrices}--\eqref{eqn:sketch}.
+The reconstruction procedure above yields a rank-$r$ matrix $\hat{\mtx{X}}$ with
+$$
+\Expect \fnorm{\smash{\mtx{X} - \hat{\mtx{X}}}}
+%   \leq 4.1 \fnorm{\mtx{X} - [\mtx{X}]_r}.
+%    \leq 3\sqrt{2} \cdot \fnorm{\mtx{X} - [\mtx{X}]_r}.
+    \leq 2 \fnorm{\mtx{X} - [\mtx{X}]_r}.
+$$
+Similar bounds hold with high probability.
+\end{theorem}
+% Previous work \cite{clarkson2009numerical} algebraically but not numerically equivalent.
+% \pause {\small Compared to \mycite{Woodruff, 2014}, new analysis, tighter constant, symmetric and PSD reconstruction, improved FP stability.}
+\end{frame}
+
+\begin{frame}{Recovery from sketch: intuition}
+
+recall
+\[
+\mtx{Y} = \mtx{X}\mtx{\Omega} \in \R^{n \times k}
+\quad\text{and}\quad
+\mtx{W} = \mtx{\Psi} \mtx{X}  \in \R^{\ell \times m}
+\]
+
+\bit
+\pitem if $\mtx{Q}$ is an orthonormal basis for $\range(\mtx{X})$, then
+\[
+\mtx{X} = \mtx{QQ^*X}
+\]
+\pitem if $\mtx{QR} = \mtx{X}\mtx{\Omega}$, then $\mtx{Q}$ is (approximately)
+a basis for $\range(\mtx{X})$
+\pitem and if $\mtx{W} = \mtx{\Psi} \mtx{X}$, we can estimate
+\beas
+\mtx{W} &=& \mtx{\Psi} \mtx{X} \\
+        &\approx& \mtx{\Psi QQ^*X} \\
+(\mtx{\Psi Q})^\dagger \mtx{W} &\approx& \mtx{Q^* X}
+\eeas
+\pitem hence we may reconstruct $X$ as
+\[
+\mtx{X} \approx \mtx{QQ^*X} \approx \mtx{Q} (\mtx{\Psi Q})^\dagger \mtx{W}
+\]
+\eit
+\end{frame}
+
+\bibliography{madeleine_refs}
+
+\end{document}

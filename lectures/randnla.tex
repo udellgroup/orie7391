@@ -276,7 +276,7 @@ given matrix $A \in \reals^{m \times n}$, subspace dimension $\ell$
 then
 \bit
 \item $Q \in \range(A)$
-\item if $\ell > \rank(A)$, then $\Span(Q) = \range(A)$ with probability 1
+\item if $\ell > \rank(A)$, then $\Span(Q) = \range(A)$ w/probability 1
 \item for quantitative error bounds, see ch 11 PGMJAT20
 \eit
 
@@ -315,7 +315,7 @@ Draw and fix two independent standard normal matrices
 \mtx{\Psi} \in \R^{\ell \times m}
 \]
 %with $k = 2r + 1$, $\ell = 4r + 3$.
-with $k = 2r + 1$, $\ell = 4r + 2$.
+with $k > r$, $\ell > k$.
 \pause \item The sketch consists of two matrices %$\mtx{Y}$ and $\mtx{W}$
 that capture the range and co-range of $\mtx{X}$:
 \[
@@ -353,7 +353,7 @@ To recover rank-$r$ approximation $\hat{\mtx{X}}$ from the sketch, compute
 \begin{theorem}[Reconstruction \cite{yurtsever2017sketchy}]
 % \protect{\mycite{Thm.~5.1, Tropp Yurtsever U Cevher 2016}}]
 Fix a target rank $r$.  Let $\mtx{X}$ be a matrix, and let $(\mtx{Y}, \mtx{W})$
-be a sketch of $\mtx{X}$. % of the form~\eqref{eqn:test-matrices}--\eqref{eqn:sketch}.
+be a sketch of $\mtx{X}$ with $k = 2r + 1$, $\ell = 4r + 2$.
 The reconstruction procedure above yields a rank-$r$ matrix $\hat{\mtx{X}}$ with
 $$
 \Expect \fnorm{\smash{\mtx{X} - \hat{\mtx{X}}}}
@@ -365,6 +365,26 @@ Similar bounds hold with high probability.
 \end{theorem}
 % Previous work \cite{clarkson2009numerical} algebraically but not numerically equivalent.
 % \pause {\small Compared to \mycite{Woodruff, 2014}, new analysis, tighter constant, symmetric and PSD reconstruction, improved FP stability.}
+\end{frame}
+
+\begin{frame}{Expectation bound yields high probability bound}
+
+Let $A$ be a positive random variable with
+\[
+\expect[A] \leq a
+\]
+Then use Markov's inequality: for any $\epsilon > 0$
+\[
+\epsilon \prob[A>\epsilon] \leq \expect[A]
+\]
+to see
+\[
+\prob[A>\epsilon] \leq a/\epsilon.
+\]
+\pause
+Can get improved bounds with stronger assumptions using
+concentration inequalities like Chebyshev, Chernoff, \ldots
+
 \end{frame}
 
 \begin{frame}{Recovery from sketch: intuition}

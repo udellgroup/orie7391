@@ -1,0 +1,301 @@
+\documentclass[presentation,xcolor={usenames,dvipsnames}]{beamer}
+
+% figures
+\newcommand{\home}{.}
+\newcommand{\figures}{\home/figures}
+\input formatting.tex
+\input defs.tex
+\usepackage{hyperref}
+\hypersetup{colorlinks=true}
+
+% \mode<handout>
+% %\mode<presentation>
+{
+\usetheme{default}
+}
+\setbeamertemplate{footline}[frame number]
+
+\bibliographystyle{alpha}
+
+\title{ORIE 7391: Faster: Algorithmic Ideas for Speeding Up Optimization\\[2ex]
+       Convex Optimization}
+
+\date{\textcolor{blue}{\today}}
+\author{Professor Udell \\[1ex]
+Operations Research and Information Engineering \\
+Cornell}
+
+\newcommand{\pl}{Polyak-Lojasiewicz}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}{Quiz}
+
+\bit
+\item A strongly convex function always satisfies the \pl condition
+\ben[A.]
+\item true
+\item false
+\een
+\item Suppose $f: \reals \to \reals$ has an $L$-Lipschitz derivative and satisfies the \pl condition. Then any stationary point $\nabla f(x) = 0$ of $f$ is a global optimum: $f(x) = \argmin_y f(y) =: f^\star$.
+\ben[A.]
+\item true
+\item false
+\een
+\item Suppose $f: \reals \to \reals$ has an $L$-Lipschitz derivative and satisfies the \pl condition. Then gradient descent on $f$ converges linearly from any starting point.
+\ben[A.]
+\item true
+\item false
+\een
+\eit
+
+\end{frame}
+
+\section{Convexity}
+
+\begin{frame}{Convexity: definitions}
+
+\question{Define convex set? convex function?}
+\bit
+\pitem A set $S \subseteq \reals^n$ is convex if it contains every chord:
+for all $\theta \in [0,1]$, $w$, $v \in S$,
+\[
+\theta w + (1-\theta)v \in S
+\]
+\pitem A function $f: \reals^n \to \reals$ is convex iff \\
+its superlevel set
+$S = \{(x, t):~t \geq f(x)\}$ is convex.
+% it never lies above its chord:
+% for all $\theta \in [0,1]$, $w$, $v \in \reals^n$
+% \[
+% f(\theta w + (1-\theta)v) \leq \theta f(w) + (1-\theta)f(v)
+% \]
+\pitem A differentiable function $f: \reals^n \to \reals$ is convex iff \\ it satisfies the first order condition
+\[
+f(v) - f(w) \geq \nabla f(w)^\top (v-w) \qquad \forall w, v \in \reals^n
+\]
+\pitem A twice differentiable function $f: \reals^n \to \reals$ is convex iff \\
+its Hessian is always \emph{positive semidefinite}: $\lambda_\text{min}(\nabla^2 f) \geq 0$
+\eit
+\end{frame}
+
+\begin{frame}{Convexity examples}
+
+\question{Which of these functions are convex?}
+
+\end{frame}
+
+\begin{frame}{Quadratic approximation}
+
+Suppose $f: \reals \to \reals$ is differentiable.
+For any $x \in \reals$, write its second order expansion about $x$:
+\[
+f(y) \approx f(x) + \nabla f(x)^T (y-x) + \frac 1 2 (y-x)^T \nabla^2 f(x) (y-x).
+\]
+If $f$ is a quadratic function, $\nabla^2 f(x) = H$ is constant.
+\vfill \pause
+Quadratic approximations are useful because quadratics are easy to minimize:
+\beas
+y^\star &=& \argmin_y f(x) + \nabla f(x)^T (y-x) + \frac 1 2 (y-x)^T H (y-x) \\
+\nabla f(x) + H (y-x) = 0 \\
+y^\star = x + H^{-1}(- \nabla f(x)).
+\eeas
+\vfill \pause
+If we approximate the Hessian of $f$ by $H = \frac 1 t I$ for some $t>0$
+and choose $x^+$ to minimize the quadratic approximation,
+we obtain the \emph{gradient descent} update with step size $t$:
+\[
+x^+ = x + - t \nabla f(x)
+\]
+
+\end{frame}
+
+\begin{frame}{Quadratic bounds}
+
+A function $f: \reals \to \reals$ is \emph{$L$-smooth} if
+\[
+f(y) \leq f(x) + \nabla f(x)^T (y-x) + \frac L 2 \|y - x\|^2.
+\]
+Equivalently, the operator $\frac 1 L \nabla f$ is \emph{$L$-Lipschitz continuous}:
+\[
+\| \nabla f(y) - \nabla f(x) \| \leq L \|y - x\|
+\]
+and $\nabla^2 f(x) \preceq LI$ for all $x \in \dom f$.
+\vfill \pause
+A function $f: \reals \to \reals$ is \emph{$\mu$-strongly convex} if
+\[
+f(y) \geq f(x) + \nabla f(x)^T (y-x) + \frac \mu 2 \|y - x\|^2.
+\]
+Equivalently, the operator $\frac 1 \mu \nabla f$ is \emph{$\mu$-coercive}:
+\[
+(\nabla f(y) - \nabla f(x))^T(y-x) \| \geq \mu \|y - x\|^2
+\]
+and $\nabla^2 f(x) \succeq \mu I$ for all $x \in \dom f$.
+\vfill \pause
+\pquestion{
+For $A \succeq 0$, the quadratic function $f(x) = \frac 1 2 x^T A x$ is ?-smoooth and ?-strongly convex}
+\panswer{$\lambdamax(A)$-smooth and $\lambdamin(A)$-strongly convex}
+
+\end{frame}
+
+\section{Gradient descent}
+
+\begin{frame}{Unconstrained minimization} \vspace*{-2ex}
+\[
+ \begin{array}{ll}
+ \mbox{minimize} & f(x)
+ \end{array}
+\]
+\bit
+\item $f: \reals^n \to \reals$ convex, ctsly differentiable
+ (hence $\dom f$ open)
+\item assume optimal value $f^\star = \inf_x f(x)$ is attained
+ (and finite)
+\item assume a starting point $x^{(0)}$ such that
+$x^{(0)} \in\dom f$ is known
+\eit
+\vfil
+
+\textbf{unconstrained minimization methods}
+\bit
+\item produce sequence of points $x^{(k)} \in\dom f$, $k=0,1,\ldots $
+with
+\[
+ f(x^{(k)})\rightarrow f^\star
+\]
+\item can be seen as iterative methods for solving
+optimality condition
+\[
+\nabla f(x^\star) = 0
+\]
+\eit
+
+\end{frame}
+
+\begin{frame}{Rates of convergence}
+
+\bit
+\item linear convergence:
+\[
+f(x^{(k)}) - f^\star \leq c^k  (f(x^{(0)}) - f^\star)
+\]
+\bit
+\item looks like a line on a semi-log plot
+\item example: gradient descent on smooth strongly convex function
+\eit
+\item sublinear convergence
+\bit
+\item looks slower than a line (curves up) on a semi-log plot
+\item example: gradient descent on smooth convex function
+\item example: stochastic gradient descent
+\eit
+\eit
+\end{frame}
+
+\begin{frame}{Gradient descent}
+
+\[
+\text{minimize} \quad f(x)
+\]
+
+idea: go downhill to get to a (the?) minimum!
+\vfill
+\begin{algorithm}[H]
+  \caption{Gradient descent}
+  \textbf{Given:} $f: \reals^d \to \reals$, stepsize $t$, maxiters \\
+  \textbf{Initialize:} $x = 0$ (or anything you'd like) \\
+  \textbf{For:} $k = 1,\ldots,\text{maxiters}$
+  \bit
+  \item update $x$:
+  \[
+  x \leftarrow x - t \nabla f(x)
+  \]
+  \eit
+\end{algorithm}
+
+\end{frame}
+
+\begin{frame}{Gradient descent: choosing a step-size}
+
+\bit
+\item \emph{constant step-size.} $t^{(k)} = t$ (constant)
+\item \emph{decreasing step-size.} $t^{(k)} = 1/k$
+% mention: need to be able to travel infinite distance, in case x^0 is really bad
+\item \emph{line search.} try different possibilities for $t^{(k)}$
+until objective at new iterate
+\[
+f(x^{(k)}) = f(x^{(k-1)} - t^{(k)} \nabla f(x^{(k-1)}))
+\]
+decreases enough.
+\eit
+tradeoff: evaluating $f(x)$ takes $\mathcal O(nd)$ flops each time \ldots
+\end{frame}
+
+\begin{frame}{Line search}
+% works really well to walk around and act out these possibilities. or maybe i should make a figure...
+define $x^+ = x - t \nabla f(x)$
+
+\bit
+\item exact line search: find $t$ to minimize $f(x^+)$
+\item the \emph{Armijo rule} requires $t$ to satisfy
+\[
+f(x^+) \leq f(x) - c t \|\nabla f(x)\|^2
+\]
+for some $c \in (0,1)$, \eg, $c = .01$.
+\eit
+\pause
+a simple \emph{backtracking line search} algorithm:
+\bit
+\item set $t = 1$
+\item if step decreases objective value sufficiently, accept $x^+$:
+\[
+f(x^+) \leq f(x) - c t \|\nabla f(x)\|^2 \quad \implies \quad x \leftarrow x^+
+\]
+otherwise, halve the stepsize $t \leftarrow t/2$ and try again
+\eit
+\vfill
+\pquestion{can we can always satisfy the Armijo rule for some $t$?}
+\panswer{yes! see gradient descent demo} %\url{https://github.com/ORIE4741/demos/blob/master/Gradient\%20descent.ipynb}}
+
+\end{frame}
+
+\section{Classical analysis of GD}
+\input{gd_analysis}
+
+\section{\pl condition}
+
+\begin{frame}{The \pl condition}
+
+A function $f: \reals \to \reals$ satisfies the \emph{\pl condition} if
+\[
+\frac 1 2 \| \nabla f(x) \|^2 \geq \mu( f(x) - f^\star)
+\]
+\pause \vfill
+\textbf{proof:}
+plug the points $(x, x^\star)$ into the strong convexity condition:
+\[
+f(x) - f^\star \leq \nabla f(x)^T (x - x^\star) - \frac \mu 2 \|x - x^\star\|^2
+\]
+since $f(x) - f^\star \geq 0$, we can establish $\mu$-coercivity of $\nabla f$:
+\beas
+\nabla f(x)^T (x - x^\star) &\geq& \frac \mu 2 \|x - x^\star\|^2 \\
+\| \nabla f(x) \| \|x - x^\star\| &\geq& \frac \mu 2 \|x - x^\star\|^2 \\
+\| \nabla f(x) \| &\geq& \frac \mu 2 \|x - x^\star\| \\
+\eeas
+Now use $L$-smoothness:
+\beas
+f(x) - f^\star &\leq& \nabla f(x^\star)^T (x - x^\star) + \frac L 2 \|x - x^\star\|^2 \\
+f(x) - f^\star &\leq& \frac L 2 \|x - x^\star\|^2 \\
+&\leq& \frac L {2\mu^2} \| \nabla f(x) \|^2
+\eeas
+where the last line uses strong convexity (the last line of the previous display).
+
+\end{frame}
+
+\bibliography{madeleine_refs}
+
+\end{document}

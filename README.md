@@ -35,10 +35,7 @@ in addition to written reports.
 * [Paper reviews](https://forms.gle/YBCHGRzuADZVbdi26) should be submitted on this google form (same link for all papers)
 * [Slack](https://join.slack.com/t/slack-jyg4802/shared_invite/zt-1240yy0lw-NNBqgPLrTLCPjYmnf5AHxw)
 for general questions and comments.
-* [Office hours](https://calendar.google.com/calendar/u/0/selfsched?sstoken=UUo4UUN0UnhjNWMxfGRlZmF1bHR8YWNmODU1NmJjYTFjMDFlMzJhYmI5ZmU3MTdlNDgxOTA)
-
-Office hours will be chosen via an in-class poll.
-You can also talk with Prof. Udell after class or
+* [Office hours](https://calendar.google.com/calendar/u/0/selfsched?sstoken=UUo4UUN0UnhjNWMxfGRlZmF1bHR8YWNmODU1NmJjYTFjMDFlMzJhYmI5ZmU3MTdlNDgxOTA) are on this calendar. You can also talk with Prof. Udell after class or
 reach out by email at udell@cornell.edu to set up an appointment.
 
 # Course format and requirements
